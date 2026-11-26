@@ -508,7 +508,8 @@ const dist=(a,b)=>Math.hypot(px(a)-px(b),py(a)-py(b));
 const dvOf=()=>cur?(cur.dv??[.05,.4,.7,1][cur.ai??1]):.4;
 const D=()=>{const v=dvOf();return{int:3.8-2.8*v,frac:.6+.3*v,aggr:4*v,mul:.85+.45*v,think:30-22*v,noise:1.5*(1-v)}};
 const dLabel=v=>v<.25?'Fácil':v<.5?'Normal':v<.8?'Difícil':'Insano';
-const TS=()=>save.ts||.45;
+const BASE=1.25;/* tempo base do jogo: +25% em todas as velocidades */
+const TS=()=>(save.ts||.45)*BASE;
 const mul=o=>o===1?1+.12*up.prod:D().mul;
 const rateAs=(p,o)=>(1+(p.r/.06)*.8)*(p.k==='fab'?1.8:p.k==='core'?1.5:1)*mul(o)*(hasMod('scarce')?.7:hasMod('rich')?1.4:1)*(cur&&cur.boss&&o===2?(cur.boss.r==='colosso'&&p===planets[1]?2:cur.boss.r==='emperor'?1.5:1):1);
 const rate=p=>rateAs(p,p.o);
@@ -1379,7 +1380,7 @@ function opts(id,key){const box=$(id);
   const paint=()=>box.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===save[key]));
   box.onclick=e=>{const b=e.target.closest('button');if(b){save[key]=+b.dataset.v;store();paint()}};paint()}
 opts('optE','e');opts('optD','d');opts('optX','skx');
-document.querySelectorAll('.optT').forEach(box=>{const paint=()=>document.querySelectorAll('.optT button').forEach(b=>b.classList.toggle('on',+b.dataset.v===TS()));
+document.querySelectorAll('.optT').forEach(box=>{const paint=()=>document.querySelectorAll('.optT button').forEach(b=>b.classList.toggle('on',+b.dataset.v===(save.ts||.45)));
   box.onclick=e=>{const b=e.target.closest('button');if(b){save.ts=+b.dataset.v;store();paint();if(cur){hud();$('pObj')&&running&&($('pObj').textContent=objText())}}};paint()});
 $('skGo').onclick=()=>{curIdx=-1;const e=save.e,n=12+e*2+Math.min(4,Math.floor(W*H/120000));
   const mods=[];if(save.skx){if(Math.random()<.7)mods.push(LIVE[Math.random()*4|0]);if(Math.random()<.6)mods.push(EVT[Math.random()*3|0])}

@@ -510,16 +510,19 @@ const D=()=>{const v=dvOf();return{int:3.8-2.8*v,frac:.6+.3*v,aggr:4*v,mul:.85+.
 const dLabel=v=>v<.25?'Fácil':v<.5?'Normal':v<.8?'Difícil':'Insano';
 const TS=()=>save.ts||.45;
 const mul=o=>o===1?1+.12*up.prod:D().mul;
-const rate=p=>(1+(p.r/.06)*.8)*(p.k==='fab'?1.8:p.k==='core'?1.5:1)*mul(p.o)*(hasMod('scarce')?.7:hasMod('rich')?1.4:1)*(cur&&cur.boss&&p.o===2?(cur.boss.r==='colosso'&&p===planets[1]?2:cur.boss.r==='emperor'?1.5:1):1);
+const rateAs=(p,o)=>(1+(p.r/.06)*.8)*(p.k==='fab'?1.8:p.k==='core'?1.5:1)*mul(o)*(hasMod('scarce')?.7:hasMod('rich')?1.4:1)*(cur&&cur.boss&&o===2?(cur.boss.r==='colosso'&&p===planets[1]?2:cur.boss.r==='emperor'?1.5:1):1);
+const rate=p=>rateAs(p,p.o);
 const SKINS=['gas','rocha','oceano','lava','gelo','tempestade','deserto'];
 function dress(p){p.skin=SKINS[R()*SKINS.length|0];p.seed=R()*1e9|0;p.ph=R()*6.28;p.dir=R()<.5?-1:1;p.tilt=(R()-.5)*.9;p.sk=null;return p}
-const cap=p=>Math.round(p.r*1500*(p.k==='fab'?.7:1)*(p.o===1?1+.15*up.cap:1));
+const capAs=(p,o)=>Math.round(p.r*1500*(p.k==='fab'?.7:1)*(o===1?1+.15*up.cap:1));
+const cap=p=>capAs(p,p.o);
 /* alcance: planetas maiores e relés vão mais longe; viagens longas perdem tropas (relés não) */
 const reachBase=p=>S*(.55+(p.r/.06)*.25)*(p.k==='rele'?1.6:1);
 const reach=p=>reachBase(p)*(p.o===1?1+.1*up.nav:1);
 const inReach=(s,d)=>dist(s,d)<=reach(s);
 const lossOf=(s,d)=>s.k==='rele'?0:Math.max(0,Math.min(1,(dist(s,d)/reach(s)-.45)/.55))*.3;
-const armor=d=>(d.k==='forte'?.6:d.k==='core'?.8:1)*(d.o===1?1-.08*up.def:1);
+const armorAs=(d,o)=>(d.k==='forte'?.6:d.k==='core'?.8:1)*(o===1?1-.08*up.def:1);
+const armor=d=>armorAs(d,d.o);
 
 let belts=[],beltC=null;
 const bpx=b=>[b[0]*W,b[1]*H,b[2]*W,b[3]*H];
@@ -699,6 +702,7 @@ function gen(L){
     planets.filter(p=>p.o===0&&p.k!=='core'&&dist(h,p)<=reachBase(h)&&!blocked(h,p)).sort((a,b)=>dist(h,a)-dist(h,b)).slice(0,L.ex)
       .forEach(p=>{p.o=o;p.t=Math.round(10+15*dvOf())})}
   if(L.boss&&(L.boss.r==='shield'||L.boss.r==='emperor'))for(const p of planets)if(p.o===2){p.shMax=p===planets[1]?40:18;p.sh=p.shMax}
+  aiQ=[];aiSh=[0,0,0,0,0];
   aiT=[0,0,0,0,0].map(()=>1.5+Math.random()*D().int);
   fx=[];parts=[];mind=[0,1,2,3,4].map(o=>({p:(L.pers||[])[o-2]||'bal',t:D().think*(.5+Math.random()*.5),hist:[],why:''}));toasts=[];
   sel=[];tapSel=null;
@@ -809,7 +813,7 @@ function fxDraw(t){
 }
 function hexA(h,a){const n=parseInt(h.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${Math.max(0,a).toFixed(3)})`}
 
-function ai(o){
+function aiLegacy(o){
   if(stormOn())return;
   const mine=planets.filter(p=>p.o===o);if(!mine.length)return;
   const Dd=D(),P=mind[o].p;
@@ -834,6 +838,96 @@ function ai(o){
     }}
   if(best){const[s,d,need]=best;send(s,d,Math.min(s.t-1,Math.ceil(need+s.t*.1)))}
 }
+
+/* ===== IA dos inimigos: planejador =====
+   1) prevê o futuro de cada planeta (chegadas de frotas em ordem, produção, armadura, escudos)
+   2) defende: manda reforços que cheguem antes da queda; se não der, escudo de emergência ou evacuação
+   3) ataca: monta planos com vários planetas, sincroniza para chegarem juntos e avalia risco e valor
+   4) logística: leva tropas da retaguarda para a linha de frente
+   Quanto maior a dificuldade, mais dessas camadas ela usa e com mais precisão. */
+let aiQ=[],aiSh=[0,0,0,0,0];
+const PW={bal:{p:1,n:1,o:1,sn:1,res:.5},agg:{p:2.2,n:.6,o:1.2,sn:1,res:.3},exp:{p:.6,n:1.8,o:.7,sn:.8,res:.4},
+  def:{p:.8,n:.8,o:.8,sn:.8,res:.95},opo:{p:1,n:.8,o:1.2,sn:2.6,res:.5}};
+const speedOf=(s,o)=>SPEED*S*(s.k==='rele'?1.7:1)*(o===1?1+.1*up.spd:1)*(bossIs('fast')&&o===2?1.5:1);
+function nebFrac(ax,ay,bx,by){if(!world.nebs||!world.nebs.length)return 0;let c=0;for(let i=0;i<10;i++){const u=(i+.5)/10;if(inNeb(ax+(bx-ax)*u,ay+(by-ay)*u))c++}return c/10}
+const travelT=(s,d,o)=>{const nf=nebFrac(px(s),py(s),px(d),py(d));return dist(s,d)*(1-nf+nf/.45)/speedOf(s,o)};
+const fleetETA=f=>{const a=fpos(f),bx=px(f.b),by=py(f.b),nf=nebFrac(a.x,a.y,bx,by);return Math.hypot(bx-a.x,by-a.y)*(1-nf+nf/.45)/Math.max(1,f.v)};
+const fleetFinal=f=>Math.max(0,f.n0-Math.floor(f.n0*(f.loss||0))-Math.floor(f.drain||0));
+const hostileTo=(o,q)=>q.o>0&&q.o<5&&q.o!==o&&!(cur.ally&&o>1&&q.o>1);
+/* futuro do planeta p: dono e tropas no instante "upto" (ou depois de todas as chegadas) */
+function simulate(p,extra,upto){
+  const ev=[];for(const f of fleets)if(f.b===p)ev.push({t:fleetETA(f),o:f.o,n:fleetFinal(f)});
+  for(const q of aiQ)if(q.d===p&&q.s.o===q.o)ev.push({t:q.at-el+q.tt,o:q.o,n:q.n*q.keep});
+  if(extra)ev.push(...extra);ev.sort((a,b)=>a.t-b.t);
+  let o=p.o,t=p.t,now=0,fall=null,sh=p.sh||0;const shT=p.shieldT||0,frz=p.frozenT||0;
+  const grow=dt=>{if(o>0&&o<5){const pt=Math.max(0,dt-Math.max(0,frz-now)),c=capAs(p,o);if(t<c)t=Math.min(c,t+rateAs(p,o)*pt)}};
+  for(const e of ev){if(upto!=null&&e.t>upto)break;grow(e.t-now);now=e.t;
+    if(e.o===o){t+=e.n;continue}
+    if(now<shT)continue;
+    const k=armorAs(p,o);let eff=e.n*k;if(sh>0&&o===2){const ab=Math.min(sh,eff);sh-=ab;eff-=ab}
+    if(eff<=t)t-=eff;else{t=(eff-t)/k;if(fall==null&&o===p.o)fall=now;o=e.o===5?0:e.o}}
+  if(upto!=null&&upto>now)grow(upto-now);
+  return{o,t,fall}}
+function pressure(o,p){let s=0;for(const q of planets){if(!hostileTo(o,q))continue;const d=dist(q,p),R=reach(q);
+  if(d<R&&!blocked(q,p))s+=q.t*(1-d/R*.6)}return s}
+function spareOf(o,s,W){const f=simulate(s);if(f.o!==o)return 0;
+  const res=pressure(o,s)*W.res*(.55+.5*dvOf());return Math.max(0,Math.min(s.t-1,s.t-res-Math.max(0,s.t-f.t)))}
+function aiShield(o,p){p.shieldT=8;aiSh[o]=el+70;fx.push({k:'ring',x:px(p),y:py(p),r:rad(p),c:COL[o],t:0,life:.9});burst(px(p),py(p),COL[o],24);
+  toasts.push({o,txt:`${NAME[o]} ativou um escudo de emergência!`,t:3});sfx('shield')}
+function defend(o,p,fallT,W){const v=dvOf();
+  const helpers=planets.filter(h=>h.o===o&&h!==p&&inReach(h,p)&&!blocked(h,p)).map(h=>({h,tt:travelT(h,p,o),sp:spareOf(o,h,W)}))
+    .filter(x=>x.sp>=2&&x.tt<fallT-.3).sort((a,b)=>a.tt-b.tt);
+  const ex=[],plan=[];
+  for(const x of helpers){const n=Math.floor(x.sp);ex.push({t:x.tt,o,n:n*(1-lossOf(x.h,p))});plan.push([x.h,n]);
+    if(simulate(p,ex).o===o){
+      for(const[h,n]of plan)send(h,p,n);return true}}
+  const valuable=p===planets[o-1]||p.k==='fab'||p.k==='core'||p.t>30;
+  if(v>=.6&&valuable&&aiSh[o]<=el&&fallT<4){aiShield(o,p);return true}
+  if(v>=.5&&fallT<2.5&&p.t>8){const to=planets.filter(q=>q.o===o&&q!==p&&inReach(p,q)&&!blocked(p,q)).sort((a,b)=>dist(p,a)-dist(p,b))[0];
+    if(to){send(p,to,Math.floor(p.t-1));return true}}
+  return false}
+function bestPlan(o,W,v,maxSrc){
+  const srcs=planets.filter(s=>s.o===o&&!(s.frozenT>0)).map(s=>({s,sp:spareOf(o,s,W)})).filter(x=>x.sp>=3);if(!srcs.length)return null;
+  let best=null;
+  for(const d of planets){if(d.o===o||(cur.ally&&d.o>1&&d.o!==o)||d.shieldT>0)continue;
+    const cand=srcs.filter(x=>x.s!==d&&inReach(x.s,d)&&!blocked(x.s,d))
+      .map(x=>({s:x.s,sp:x.sp,tt:travelT(x.s,d,o),keep:(1-lossOf(x.s,d))*(segHole(px(x.s),py(x.s),px(d),py(d))?.55:1)})).sort((a,b)=>a.tt-b.tt);
+    if(!cand.length)continue;
+    const use=[];let sum=0,T=0,need=1e9;
+    for(const c of cand.slice(0,maxSrc)){use.push(c);sum+=c.sp*c.keep;T=c.tt;const st=simulate(d,null,T);
+      need=st.o===o?0:(st.t/armorAs(d,st.o)+(st.o===2&&d.sh?d.sh:0)+2)*(v<.25?.7+Math.random()*.7:1.08+W.res*.12);if(sum>=need)break}
+    if(need<=0||sum<need)continue;
+    let val=rateAs(d,o)*45+(d.k==='fab'?18:d.k==='rele'?8:0)+(d.k==='core'?(cur.obj==='core'?80:20):0);
+    val+=d.o===1?18*W.p*(1+v):d.o===0?12*W.n:15*W.o;
+    if(d.o){const st=simulate(d,null,T);if(st.o===d.o&&st.t<d.t*.5)val+=20*W.sn}
+    const gar=sum-need,risk=pressure(o,d);if(risk>gar*1.6+10)val-=Math.min(val*.6,(risk-gar)*.3);
+    const score=val*100/(need+12)-T*(v<.5?1.2:.8);
+    if(!best||score>best.score)best={d,use,need,score,T}}
+  return best&&best.score>(v<.25?0:6)?best:null}
+function execPlan(o,pl,v){let rem=pl.need;
+  for(const c of pl.use){if(rem<=0)break;const n=Math.min(Math.floor(c.sp),Math.ceil(rem/c.keep)+1);if(n<1)continue;rem-=n*c.keep;
+    const delay=v>=.5?Math.max(0,pl.T-c.tt):0;
+    if(delay<.25)send(c.s,pl.d,n);else aiQ.push({at:el+delay,o,s:c.s,d:pl.d,n,tt:c.tt,keep:c.keep})}}
+function logistics(o,W){const mine=planets.filter(p=>p.o===o);let front=null,fp=0;
+  for(const p of mine){const pr=pressure(o,p);if(pr>fp){fp=pr;front=p}}if(!front)return false;
+  for(const r of mine){if(r===front||pressure(o,r)>2)continue;const sp=spareOf(o,r,W);
+    if(sp>capAs(r,o)*.3&&inReach(r,front)&&!blocked(r,front)){send(r,front,Math.floor(sp*.7));return true}}return false}
+function ai(o){
+  if(stormOn())return;const mine=planets.filter(p=>p.o===o);if(!mine.length)return;
+  const v=dvOf(),m=mind[o],W0=PW[m.p]||PW.bal,acts=v<.25?1:v<.5?2:v<.8?3:4;let maxSrc=v<.25?1:v<.5?2:v<.8?3:4;
+  /* vantagem: compara suas tropas com o maior rival; na frente, arrisca mais; atrás, segura mais */
+  const tot=[0,0,0,0,0,0];for(const p of planets)if(p.o)tot[p.o]+=p.t;for(const f of fleets)tot[f.o]+=f.n;
+  let rival=1;for(let q=1;q<5;q++)if(q!==o&&!(cur.ally&&o>1&&q>1))rival=Math.max(rival,tot[q]);
+  const adv=tot[o]/rival,W={...W0,res:W0.res*(adv>1.3?.5:adv<.7?1.2:1)};if(adv>1.3)maxSrc+=3;
+  /* cerco: se ficou alguns turnos sem achar ataque, junta todas as forças num golpe só */
+  if(v>=.25&&(m.idle||0)>=3){maxSrc=99;W.res*=.45}
+  let done=0;
+  if(Math.random()<(v<.25?.35:v<.5?.8:1))for(const p of mine){if(done>=acts)break;const f=simulate(p);if(f.o!==o&&defend(o,p,f.fall??0,W))done++}
+  let att=0;while(done<acts){const pl=bestPlan(o,W,v,maxSrc);if(!pl)break;execPlan(o,pl,v);done++;att++}
+  m.idle=att?0:(m.idle||0)+1;
+  if(done<acts&&v>=.4)logistics(o,W)}
+function aiQueueStep(){for(let i=aiQ.length-1;i>=0;i--){const q=aiQ[i];if(el<q.at)continue;aiQ.splice(i,1);
+  if(q.s.o===q.o&&q.s.t>2&&q.d.o!==q.o)send(q.s,q.d,Math.min(q.n,Math.floor(q.s.t-1)))}}
 
 /* cérebro estratégico: lê a partida e escolhe a postura */
 function think(o){
@@ -931,7 +1025,7 @@ const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%6
 function update(rdt){
   const dt=rdt*TS();elR+=rdt;el+=dt;
   if(cur.obj==='core'){const c=planets.find(p=>p.k==='core');cur.coreT=c&&c.o===1?(cur.coreT||0)+dt:0}
-  worldStep(dt,rdt);
+  worldStep(dt,rdt);aiQueueStep();
   for(const p of planets){if(!p.o){if(hasMod('rebels')&&p.t<cap(p)*.6)p.t+=rate(p)*.3*dt;continue}if(p.frozenT>0)continue;const c=cap(p);
     if(p.t<c)p.t=Math.min(c,p.t+rate(p)*dt);else p.t=Math.max(c,p.t-dt*2)}
   for(const[s,r]of routes){if(s.o!==1||!r.ds.length){routes.delete(s);continue}
@@ -1270,6 +1364,7 @@ function brief(i){curIdx=i;const L=LV[i];
   for(const m of L.mods)if(MODS[m])h+=`<div><span class="dot" style="background:#ffc940"></span>${MODS[m]}</div>`;
   if(L.ally)h+=`<div><span class="dot" style="background:#ff5470"></span>Aliança: os inimigos não se atacam — todos vêm atrás de você.</div>`;
   if(L.ex)h+=`<div><span class="dot" style="background:#b07cff"></span>Cada inimigo já começa com ${L.ex} planetas extras.</div>`;
+  if(L.dv>=.6)h+=`<div><span class="dot" style="background:#ff5470"></span>Inimigos de elite: coordenam ataques com vários planetas e podem usar um escudo de emergência de tempos em tempos.</div>`;
   if(L.belts&&L.belts.length)h+=`<div><svg width="30" height="30" viewBox="0 0 30 30"><g fill="#8b7d6d"><path d="M5 12l4-3 4 2 1 4-4 3-4-2z"/><path d="M16 17l3-2 4 1 1 3-3 3-4-1z"/><path d="M19 6l3-1 2 2-1 3-3 0z"/></g></svg>Cinturão de asteroides — bloqueia envios que cruzem por ele. Contorne pelas passagens.</div>`;
   if(L.tut!=null){h=`<div><b>${goal}</b></div><div><span class="dot" style="background:#ffc940"></span>${save.tut[L.tut]?'Você já fez este treinamento. Para ver as explicações de novo, use "Refazer tutorial" em Ajustes.':'Esta missão tem um tutorial guiado, passo a passo.'}</div>`}
   $('bStart').textContent=L.tut!=null&&!save.tut[L.tut]?'Começar treinamento':'Começar';

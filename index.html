@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
-
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Órbita</title>
 <meta name="theme-color" content="#050816">
@@ -164,7 +163,7 @@ canvas.prev{width:72px;height:48px;display:block}
   </header>
   <div class="dom"><small>Domínio</small><div class="bar" id="bar" aria-label="Domínio de tropas"></div><span id="domPct">—</span></div>
   <div id="ais" aria-label="Postura dos inimigos"></div>
-  <div class="stage"><canvas id="c"></canvas><div class="cut tutbox" id="tutBox" hidden></div></div>
+  <div class="stage"><canvas id="c"></canvas><button id="bFit" class="cut fitb" hidden aria-label="Ver mapa todo">⤢</button><div class="cut tutbox" id="tutBox" hidden></div></div>
   <div class="abil" id="abil" aria-label="Habilidades">
     <button id="ab-shield"><span><svg width="16" height="16" viewBox="0 0 16 16"><path d="M8 1l6 2.5V8c0 3.4-2.6 6-6 7-3.4-1-6-3.6-6-7V3.5z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>Escudo</span><em><svg class="coin"><use href="#coin"/></svg><i>40</i></em></button>
     <button id="ab-shock"><span><svg width="16" height="16" viewBox="0 0 16 16"><path d="M9.5 1L3 9h4.5L6 15l7-8.5H8.5z" fill="currentColor"/></svg>Choque</span><em><svg class="coin"><use href="#coin"/></svg><i>60</i></em></button>
@@ -226,6 +225,8 @@ canvas.prev{width:72px;height:48px;display:block}
   <div class="row" id="optE"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button></div>
   <div class="lbl">Dificuldade</div>
   <div class="row" id="optD"><button data-v="0">Fácil</button><button data-v="1">Normal</button><button data-v="2">Difícil</button><button data-v="3">Insano</button></div>
+  <div class="lbl">Tamanho do mapa (use pinça para zoom)</div>
+  <div class="row" id="optM"><button data-v="0">Normal</button><button data-v="1">Grande</button><button data-v="2">Gigante</button></div>
   <div class="lbl">Surpresas (mapas vivos e eventos)</div>
   <div class="row" id="optX"><button data-v="1">Ligadas</button><button data-v="0">Desligadas</button></div>
   <div class="lbl">Velocidade do jogo</div>
@@ -429,7 +430,7 @@ const INTRO={15:['orbit'],17:['nebula'],19:['storm'],20:['comets'],24:['pirates'
     L.n=n;L.txt=txt;LV.push(L);
   }
 })();
-LV.forEach((L,i)=>{L.dv=+(.03+i*.97/(LV.length-1)).toFixed(3);L.neu=L.tutNeu??+(.8+i*.7/(LV.length-1)).toFixed(3);L.belts=BELTS[L.bk??PLAN[i]]||[];L.sec=Math.floor(i/15);
+LV.forEach((L,i)=>{L.dv=+(.03+i*.97/(LV.length-1)).toFixed(3);L.neu=L.tutNeu??+(.8+i*.7/(LV.length-1)).toFixed(3);L.belts=BELTS[L.bk??PLAN[i]]||[];L.sec=Math.floor(i/15);if(i>=30&&!L.mapK)L.mapK=[1,1,1.15,1.3,1.45,1.6,1.75][L.sec];
   L.mods=[...(L.mods||[]),...(INTRO[i]||[])];if(L.mods.includes('orbit'))L.belts=[];
   if(i%15===14){L.boss=BOSS[L.sec];L.obj='kill';L.goal=2;L.lim=0;L.txt=`Chefe do setor: ${L.boss.n}. ${L.boss.d} Derrote-o para fechar o setor.`}});
 const hasMod=m=>!!(cur&&cur.mods&&cur.mods.includes(m));
@@ -450,7 +451,7 @@ function cleanSave(d){if(!d||typeof d!=='object'||Array.isArray(d))return{};
   const id=v=>typeof v==='string'&&/^[a-z0-9]{1,16}$/i.test(v)?v:undefined;
   const day=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)?v:undefined;
   const o={};
-  for(const[k,lo,hi]of[['coins',0,1e9],['unl',0,105],['ts',.1,2],['tsv',0,99],['e',1,3],['d',0,3],['skx',0,1],['sec',0,6],['snd',0,1],['mus',0,1],['vib',0,1],['vol',0,1],['mvol',0,1],['bonus',0,1e6],['tutSeen',0,1]]){const v=num(d[k],lo,hi);if(v!==undefined)o[k]=v}
+  for(const[k,lo,hi]of[['coins',0,1e9],['unl',0,105],['ts',.1,2],['tsv',0,99],['e',1,3],['d',0,3],['skx',0,1],['sec',0,6],['snd',0,1],['mus',0,1],['vib',0,1],['vol',0,1],['mvol',0,1],['bonus',0,1e6],['tutSeen',0,1],['msz',0,2]]){const v=num(d[k],lo,hi);if(v!==undefined)o[k]=v}
   if(Array.isArray(d.stars))o.stars=d.stars.slice(0,105).map(v=>num(v,0,3)??0);
   if(Array.isArray(d.ach))o.ach=[...new Set(d.ach.map(id).filter(Boolean))].slice(0,64);
   if(d.up&&typeof d.up==='object'){o.up={};for(const k of['prod','spd','def','start','cap','nav'])o.up[k]=num(d.up[k],0,3)??0}
@@ -463,7 +464,7 @@ function cleanSave(d){if(!d||typeof d!=='object'||Array.isArray(d))return{};
   if(d.daily&&typeof d.daily==='object'){const b={};if(d.daily.best&&typeof d.daily.best==='object')for(const[k,v]of Object.entries(d.daily.best))if(day(k)&&num(v,0,1e6)!==undefined)b[k]=v;
     o.daily={best:b,streak:num(d.daily.streak,0,1e5)??0,last:day(d.daily.last)||''}}
   if(d.stats&&typeof d.stats==='object'){const st=d.stats,S0={};
-    for(const k of['wins','caps','maxWave','coreWins','fogWins','perfect','dailyWins','maxCoins'])S0[k]=num(st[k],0,1e9)??0;
+    for(const k of['wins','caps','maxWave','coreWins','fogWins','perfect','dailyWins','maxCoins','ups','clash'])S0[k]=num(st[k],0,1e9)??0;
     S0.bosses=Array.isArray(st.bosses)?[...new Set(st.bosses.map(v=>num(v,0,6)).filter(v=>v!==undefined))]:[];
     S0.abil={};if(st.abil&&typeof st.abil==='object')for(const k of['shield','shock','freeze']){const v=num(st.abil[k],0,1e7);if(v)S0.abil[k]=v}
     o.stats=S0}
@@ -492,6 +493,8 @@ const money=n=>Math.round(n).toLocaleString('pt-BR');
 let matchCoins=0,elR=0,gT=0;
 
 let W=0,H=0,S=1,bg=null,planets=[],fleets=[],aiT=[],routes=new Map();
+/* W,H = tamanho do mapa (mundo); VW,VH = tamanho da tela; a câmera leva o mundo para a tela */
+let VW=0,VH=0,mapK=1,cam={z:1,ox:0,oy:0};
 let running=false,paused=false,frac=.5,mode=0,cur=null,curIdx=-1,el=0,dashT=0,hint=false,mind=[],toasts=[];
 
 let R=Math.random;
@@ -499,22 +502,22 @@ function seedR(s){let a=s>>>0;R=()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1
 
 let DPR=1,tw=[];
 function resize(){
-  const dpr=DPR=Math.min(devicePixelRatio||1,2);W=C.clientWidth;H=C.clientHeight;if(!W||!H)return;
-  C.width=W*dpr;C.height=H*dpr;X.setTransform(dpr,0,0,dpr,0,0);S=Math.min(W,H);
+  const dpr=DPR=Math.min(devicePixelRatio||1,2);VW=C.clientWidth;VH=C.clientHeight;if(!VW||!VH)return;W=VW*mapK;H=VH*mapK;
+  C.width=VW*dpr;C.height=VH*dpr;X.setTransform(dpr,0,0,dpr,0,0);S=Math.min(VW,VH);if(typeof clampCam==='function'&&planets.length)clampCam();
   for(const p of planets)p.sk=null;
-  bg=document.createElement('canvas');bg.width=W*dpr;bg.height=H*dpr;
+  bg=document.createElement('canvas');bg.width=VW*dpr;bg.height=VH*dpr;
   const g=bg.getContext('2d');g.scale(dpr,dpr);const rn=Math.random;
-  const gr=g.createLinearGradient(0,0,W*.3,H);gr.addColorStop(0,'#060a1c');gr.addColorStop(.55,'#0a0f26');gr.addColorStop(1,'#03050c');
-  g.fillStyle=gr;g.fillRect(0,0,W,H);
+  const gr=g.createLinearGradient(0,0,VW*.3,VH);gr.addColorStop(0,'#060a1c');gr.addColorStop(.55,'#0a0f26');gr.addColorStop(1,'#03050c');
+  g.fillStyle=gr;g.fillRect(0,0,VW,VH);
   /* nebulosas: nuvens feitas de muitas manchas suaves */
-  const nebs=[[W*.85,H*.7,'176,124,255'],[W*.12,H*.25,'40,180,220'],[W*.6,H*.15,'255,84,140']];
+  const nebs=[[VW*.85,VH*.7,'176,124,255'],[VW*.12,VH*.25,'40,180,220'],[VW*.6,VH*.15,'255,84,140']];
   g.globalCompositeOperation='lighter';
   for(const[nx,ny,c]of nebs)for(let i=0;i<46;i++){
     const a=rn()*6.28,d=rn()*S*.45,x=nx+Math.cos(a)*d,y=ny+Math.sin(a)*d*.7,r=S*(.06+rn()*.18);
     const q=g.createRadialGradient(x,y,0,x,y,r);q.addColorStop(0,`rgba(${c},${.025+rn()*.03})`);q.addColorStop(1,`rgba(${c},0)`);
     g.fillStyle=q;g.fillRect(x-r,y-r,r*2,r*2)}
   /* galáxia distante */
-  const gx=W*.78,gy=H*.32;
+  const gx=VW*.78,gy=VH*.32;
   for(let i=0;i<500;i++){const arm=i%2,tt=rn()*3.2,rr=tt*S*.03+rn()*4,a=tt*1.9+arm*Math.PI;
     g.fillStyle=`rgba(255,240,220,${.08+rn()*.25})`;g.fillRect(gx+Math.cos(a)*rr,gy+Math.sin(a)*rr*.45,1,1)}
   const core=g.createRadialGradient(gx,gy,0,gx,gy,S*.04);core.addColorStop(0,'rgba(255,235,200,.5)');core.addColorStop(1,'rgba(255,235,200,0)');
@@ -522,13 +525,13 @@ function resize(){
   g.globalCompositeOperation='source-over';
   /* estrelas em camadas */
   const tint=['#ffffff','#cfe3ff','#ffe9c4','#ffd0d8'];
-  for(let i=0;i<W*H/700;i++){g.globalAlpha=rn()*.5+.08;g.fillStyle=tint[rn()*4|0];g.fillRect(rn()*W,rn()*H,1,1)}
-  for(let i=0;i<W*H/9000;i++){const x=rn()*W,y=rn()*H,r=.8+rn()*1.2;g.globalAlpha=.5+rn()*.5;g.fillStyle=tint[rn()*4|0];
+  for(let i=0;i<VW*VH/700;i++){g.globalAlpha=rn()*.5+.08;g.fillStyle=tint[rn()*4|0];g.fillRect(rn()*VW,rn()*VH,1,1)}
+  for(let i=0;i<VW*VH/9000;i++){const x=rn()*VW,y=rn()*VH,r=.8+rn()*1.2;g.globalAlpha=.5+rn()*.5;g.fillStyle=tint[rn()*4|0];
     g.beginPath();g.arc(x,y,r,0,7);g.fill();
     if(rn()<.25){g.globalAlpha=.35;g.fillRect(x-r*4,y-.4,r*8,.8);g.fillRect(x-.4,y-r*4,.8,r*8)}}
   g.globalAlpha=1;
   if(typeof belts!=='undefined'&&belts.length)setTimeout(renderBelts);
-  tw=Array.from({length:Math.round(W*H/6000)},()=>({x:rn()*W,y:rn()*H,ph:rn()*6.28,s:.6+rn()*1.2}));
+  tw=Array.from({length:Math.round(VW*VH/6000)},()=>({x:rn()*VW,y:rn()*VH,ph:rn()*6.28,s:.6+rn()*1.2}));
 }
 new ResizeObserver(resize).observe(C);
 
@@ -540,11 +543,22 @@ const dLabel=v=>v<.25?'Fácil':v<.5?'Normal':v<.8?'Difícil':'Insano';
 const BASE=1.25;/* tempo base do jogo: +25% em todas as velocidades */
 const TS=()=>(save.ts||.45)*BASE;
 const mul=o=>o===1?1+.12*up.prod:D().mul;
-const rateAs=(p,o)=>(1+(p.r/.06)*.8)*(p.k==='fab'?1.8:p.k==='core'?1.5:1)*mul(o)*(hasMod('scarce')?.7:hasMod('rich')?1.4:1)*(cur&&cur.boss&&o===2?(cur.boss.r==='colosso'&&p===planets[1]?2:cur.boss.r==='emperor'?1.5:1):1);
+const rateAs=(p,o)=>(1+.4*(p.lv||0))*(1+(p.r/.06)*.8)*(p.k==='fab'?1.8:p.k==='core'?1.5:1)*mul(o)*(hasMod('scarce')?.7:hasMod('rich')?1.4:1)*(cur&&cur.boss&&o===2?(cur.boss.r==='colosso'&&p===planets[1]?2:cur.boss.r==='emperor'?1.5:1):1);
 const rate=p=>rateAs(p,p.o);
 const SKINS=['gas','rocha','oceano','lava','gelo','tempestade','deserto'];
 function dress(p){p.skin=SKINS[R()*SKINS.length|0];p.seed=R()*1e9|0;p.ph=R()*6.28;p.dir=R()<.5?-1:1;p.tilt=(R()-.5)*.9;p.sk=null;return p}
-const capAs=(p,o)=>Math.round(p.r*1500*(p.k==='fab'?.7:1)*(o===1?1+.15*up.cap:1));
+const capAs=(p,o)=>Math.round(p.r*1500*(p.k==='fab'?.7:1)*(o===1?1+.15*up.cap:1)*(1+.35*(p.lv||0)));
+/* evolução: pequenos 1 nível, médios 2, grandes 3 */
+const lvMax=p=>p.k==='core'?0:p.r>=.05?3:p.r>=.036?2:1;
+const upCost=p=>Math.round(p.r*1500*(.3+.15*(p.lv||0)));
+const canUp=p=>(p.lv||0)<lvMax(p)&&p.t>=upCost(p)+1&&!(p.frozenT>0);
+function upgrade(p){if((p.lv||0)>=lvMax(p))return false;const c=upCost(p);
+  if(p.t<c+1){if(p.o===1)say(`Faltam ${Math.ceil(c+1-p.t)} tropas para evoluir`);return false}
+  p.t-=c;p.lv=(p.lv||0)+1;p.flash=Math.max(p.flash||0,.8);const x=px(p),y=py(p),r=rad(p),col=COL[p.o];
+  fx.push({k:'ring',x,y,r,c:col,t:0,life:.9});fx.push({k:'ring',x,y,r,c:'#ffc940',t:-.15,life:1});burst(x,y,'#ffc940',14);
+  if(p.o===1){sfx('upgrade');buzz('capture');tutF.up=1;say(`Planeta evoluído para o nível ${p.lv}${p.lv>=lvMax(p)?' (máximo)':''}`);SS().ups=(SS().ups||0)+1}
+  else if(fogVis==null||fogVis.has(p))sfx('upgrade',.25);
+  return true}
 const cap=p=>capAs(p,p.o);
 /* alcance: planetas maiores e relés vão mais longe; viagens longas perdem tropas (relés não) */
 const reachBase=p=>S*(.55+(p.r/.06)*.25)*(p.k==='rele'?1.6:1);
@@ -690,7 +704,9 @@ function drawWorldBack(t){
     for(const b of planets){if(b.o!==2)continue;for(const q of planets){if(!q.o||q.o===2||q.o===5)continue;
       if(dist(b,q)<reach(b)*.7){X.beginPath();X.moveTo(px(q),py(q));X.lineTo(px(b),py(b));X.stroke()}}}X.setLineDash([])}
 }
-function drawWorldFront(t){
+function camT(){X.setTransform(DPR*cam.z,0,0,DPR*cam.z,DPR*cam.ox,DPR*cam.oy)}
+function scrT(){X.setTransform(DPR,0,0,DPR,0,0)}
+function drawComets(t){
   for(const c of world.comets||[]){
     if(c.warn>0){X.setLineDash([8,10]);X.lineDashOffset=-t*40;X.strokeStyle=`rgba(191,232,255,${.25+.25*Math.sin(t*10)})`;X.lineWidth=2;
       X.beginPath();X.moveTo(c.x0,c.y0);X.lineTo(c.x1,c.y1);X.stroke();X.setLineDash([]);continue}
@@ -702,17 +718,19 @@ function drawWorldFront(t){
     const hg=X.createRadialGradient(c.x,c.y,0,c.x,c.y,S*.04);hg.addColorStop(0,'#fff');hg.addColorStop(.4,'rgba(180,230,255,.8)');hg.addColorStop(1,'rgba(180,230,255,0)');
     X.fillStyle=hg;X.beginPath();X.arc(c.x,c.y,S*.04,0,7);X.fill();X.globalCompositeOperation='source-over';
     if(running&&!paused&&Math.random()<.7)parts.push({x:c.x,y:c.y,vx:(Math.random()-.5)*30-Math.cos(ang)*50,vy:(Math.random()-.5)*30-Math.sin(ang)*50,t:0,life:.6,c:'#bfe8ff',s:1.5})}
+}
+function drawOverlay(t){
   const st=world.storm;
   if(st&&(st.on>0||st.warn>0)){const on=st.on>0,pu=.5+.5*Math.sin(t*(on?6:10));
-    const g=X.createRadialGradient(W/2,H/2,Math.min(W,H)*.3,W/2,H/2,Math.max(W,H)*.75);
-    g.addColorStop(0,'rgba(255,120,40,0)');g.addColorStop(1,`rgba(255,${on?110:180},40,${(on?.38:.2)*pu+.05})`);X.fillStyle=g;X.fillRect(0,0,W,H);
-    if(on){X.strokeStyle='rgba(255,190,90,.28)';X.lineWidth=1;for(let i=0;i<26;i++){const y=((i*53+t*220)%(H+40))-20,x=((i*97+t*90)%(W+40))-20;
+    const g=X.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*.3,VW/2,VH/2,Math.max(VW,VH)*.75);
+    g.addColorStop(0,'rgba(255,120,40,0)');g.addColorStop(1,`rgba(255,${on?110:180},40,${(on?.38:.2)*pu+.05})`);X.fillStyle=g;X.fillRect(0,0,VW,VH);
+    if(on){X.strokeStyle='rgba(255,190,90,.28)';X.lineWidth=1;for(let i=0;i<26;i++){const y=((i*53+t*220)%(VH+40))-20,x=((i*97+t*90)%(VW+40))-20;
       X.beginPath();X.moveTo(x,y);X.lineTo(x-14,y-26);X.stroke()}}}
   const b=world.banner;if(b){const u=b.t/b.life,al=u<.08?u/.08:u>.8?(1-u)/.2:1;X.globalAlpha=Math.max(0,al);
     X.font='700 17px "Chakra Petch",sans-serif';X.textAlign='center';X.textBaseline='middle';
-    const w=Math.min(W-20,X.measureText(b.txt).width+40),y=H*.17;
-    X.fillStyle='rgba(5,8,18,.9)';X.beginPath();X.roundRect?X.roundRect(W/2-w/2,y-18,w,36,10):X.rect(W/2-w/2,y-18,w,36);X.fill();
-    X.strokeStyle=b.c;X.lineWidth=1.5;X.stroke();X.shadowColor=b.c;X.shadowBlur=12;X.fillStyle=b.c;X.fillText(b.txt,W/2,y+1);X.shadowBlur=0;X.globalAlpha=1}
+    const w=Math.min(VW-20,X.measureText(b.txt).width+40),y=VH*.17;
+    X.fillStyle='rgba(5,8,18,.9)';X.beginPath();X.roundRect?X.roundRect(VW/2-w/2,y-18,w,36,10):X.rect(VW/2-w/2,y-18,w,36);X.fill();
+    X.strokeStyle=b.c;X.lineWidth=1.5;X.stroke();X.shadowColor=b.c;X.shadowBlur=12;X.fillStyle=b.c;X.fillText(b.txt,VW/2,y+1);X.shadowBlur=0;X.globalAlpha=1}
 }
 
 let homeOrder=[0,1,2,3];
@@ -720,7 +738,7 @@ function connected(){const seen=new Set([planets[0]]),q=[planets[0]];
   while(q.length){const a=q.pop();for(const b of planets)if(!seen.has(b)&&dist(a,b)<=reachBase(a)&&!blocked(a,b)){seen.add(b);q.push(b)}}
   return seen.size===planets.length}
 function gen(L){
-  resize();
+  mapK=L.mapK||1;cam={z:1,ox:0,oy:0};resize();
   /* sorteio dos cantos: 1 inimigo fica sempre na diagonal oposta; com mais, todos os cantos são embaralhados */
   let rr=Math.random;if(L.homeSeed){seedR(L.homeSeed);rr=R}
   if(L.e===1){const d=rr()<.5?[0,1]:[2,3];homeOrder=rr()<.5?d:[d[1],d[0]]}
@@ -772,6 +790,7 @@ function arrive(f){const d=f.b;
   if(d.sh>0){const ab=Math.min(d.sh,eff);d.sh-=ab;eff-=ab;burst(px(d),py(d),'#ff5470',8)}
   if(eff<=d.t){d.t-=eff;hitFx(f,d);return}
   if(prev===1)cur.lost=true;
+  d.lv=Math.max(0,(d.lv||0)-1);
   d.t=(eff-d.t)/k;d.frozenT=0;d.shieldT=0;
   if(f.o===5){d.o=0;routes.delete(d);captureFx(d,5,prev)}
   else{d.o=f.o;if(f.o!==1)routes.delete(d);captureFx(d,f.o,prev)}
@@ -882,7 +901,7 @@ const speedOf=(s,o)=>SPEED*S*(s.k==='rele'?1.7:1)*(o===1?1+.1*up.spd:1)*(bossIs(
 function nebFrac(ax,ay,bx,by){if(!world.nebs||!world.nebs.length)return 0;let c=0;for(let i=0;i<10;i++){const u=(i+.5)/10;if(inNeb(ax+(bx-ax)*u,ay+(by-ay)*u))c++}return c/10}
 const travelT=(s,d,o)=>{const nf=nebFrac(px(s),py(s),px(d),py(d));return dist(s,d)*(1-nf+nf/.45)/speedOf(s,o)};
 const fleetETA=f=>{const a=fpos(f),bx=px(f.b),by=py(f.b),nf=nebFrac(a.x,a.y,bx,by);return Math.hypot(bx-a.x,by-a.y)*(1-nf+nf/.45)/Math.max(1,f.v)};
-const fleetFinal=f=>Math.max(0,f.n0-Math.floor(f.n0*(f.loss||0))-Math.floor(f.drain||0));
+const fleetFinal=f=>Math.max(0,f.n0-Math.floor(f.n0*(f.loss||0))-Math.floor(f.drain||0)-Math.floor(f.cb||0));
 const hostileTo=(o,q)=>q.o>0&&q.o<5&&q.o!==o&&!(cur.ally&&o>1&&q.o>1);
 /* futuro do planeta p: dono e tropas no instante "upto" (ou depois de todas as chegadas) */
 function simulate(p,extra,upto){
@@ -942,6 +961,11 @@ function logistics(o,W){const mine=planets.filter(p=>p.o===o);let front=null,fp=
   for(const p of mine){const pr=pressure(o,p);if(pr>fp){fp=pr;front=p}}if(!front)return false;
   for(const r of mine){if(r===front||pressure(o,r)>2)continue;const sp=spareOf(o,r,W);
     if(sp>capAs(r,o)*.3&&inReach(r,front)&&!blocked(r,front)){send(r,front,Math.floor(sp*.7));return true}}return false}
+const PU={exp:.55,def:.6,bal:.45,opo:.35,agg:.25};
+function aiUpgrade(o,W){const v=dvOf();if(v<.25)return false;
+  const c=planets.filter(p=>p.o===o&&(p.lv||0)<lvMax(p)&&!(p.frozenT>0)&&pressure(o,p)<2&&p.t>=upCost(p)+Math.max(4,capAs(p,o)*.12)&&simulate(p).o===o)
+    .sort((a,b)=>rateAs(b,o)/upCost(b)-rateAs(a,o)/upCost(a))[0];
+  return c?upgrade(c):false}
 function ai(o){
   if(stormOn())return;const mine=planets.filter(p=>p.o===o);if(!mine.length)return;
   const v=dvOf(),m=mind[o],W0=PW[m.p]||PW.bal,acts=v<.25?1:v<.5?2:v<.8?3:4;let maxSrc=v<.25?1:v<.5?2:v<.8?3:4;
@@ -953,7 +977,8 @@ function ai(o){
   if(v>=.25&&(m.idle||0)>=3){maxSrc=99;W.res*=.45}
   let done=0;
   if(Math.random()<(v<.25?.35:v<.5?.8:1))for(const p of mine){if(done>=acts)break;const f=simulate(p);if(f.o!==o&&defend(o,p,f.fall??0,W))done++}
-  let att=0;while(done<acts){const pl=bestPlan(o,W,v,maxSrc);if(!pl)break;execPlan(o,pl,v);done++;att++}
+  let att=0;while(done<acts){const pl=bestPlan(o,W,v,maxSrc);if(!pl||(pl.score<28&&Math.random()<(PU[m.p]??.4)&&aiUpgrade(o,W))){if(pl)done++;break}execPlan(o,pl,v);done++;att++}
+  if(!att&&done<acts&&Math.random()<(PU[m.p]??.4))aiUpgrade(o,W);
   m.idle=att?0:(m.idle||0)+1;
   if(done<acts&&v>=.4)logistics(o,W)}
 function aiQueueStep(){for(let i=aiQ.length-1;i>=0;i--){const q=aiQ[i];if(el<q.at)continue;aiQ.splice(i,1);
@@ -1052,6 +1077,28 @@ function finishEnd(rows,title,starsHtml,txt,kick){
   $('eNext').hidden=true;$('eCont').hidden=true;show('vEnd');abilUI();achCheck()}
 const fmt=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 
+/* combate no caminho: frotas inimigas que se cruzam param e trocam tiros até uma ser destruída */
+const clashes=[];let clashSfx=0;
+function clashStep(dt){clashes.length=0;if(fleets.length<2)return;const R2=(S*.045)**2,P=fleets.map(fpos);
+  for(const f of fleets)f.fight=0;
+  for(let i=0;i<fleets.length;i++){const a=fleets[i];if(a.n<=0)continue;
+    for(let j=i+1;j<fleets.length;j++){const b=fleets[j];if(a.o===b.o||b.n<=0)continue;
+      if(cur.ally&&a.o>1&&b.o>1&&a.o!==5&&b.o!==5)continue;
+      const dx=P[i].x-P[j].x,dy=P[i].y-P[j].y;if(dx*dx+dy*dy>R2)continue;
+      const m=Math.min(a.n,b.n),k=Math.min(m,dt*(8+.8*m));a.cb=(a.cb||0)+k;b.cb=(b.cb||0)+k;a.fight=b.fight=1;
+      if(a.o===1||b.o===1){SS().clash=(SS().clash||0)+k;if(!cur.clashSeen){cur.clashSeen=1;say('Combate no caminho!')}}
+      clashes.push([P[i],P[j],a.o,b.o]);
+      if(Math.random()<.4){const t=Math.random(),x=P[i].x+(P[j].x-P[i].x)*t,y=P[i].y+(P[j].y-P[i].y)*t,an=Math.random()*6.28,v=30+Math.random()*80;
+        parts.push({x,y,vx:Math.cos(an)*v,vy:Math.sin(an)*v,t:0,life:.25+Math.random()*.3,c:Math.random()<.5?COL[a.o]:'#fff',s:1.2+Math.random()*1.4})}}}
+  if(clashes.length&&elR>clashSfx){clashSfx=elR+.22;sfx('clash',.12)}}
+function drawClashes(t){if(!clashes.length)return;X.lineCap='round';
+  for(const[a,b,oa,ob]of clashes){const mx=(a.x+b.x)/2+(Math.random()-.5)*6,my=(a.y+b.y)/2+(Math.random()-.5)*6;
+    X.globalAlpha=.35+.6*Math.random();X.lineWidth=1.6;
+    X.strokeStyle=COL[oa];X.beginPath();X.moveTo(a.x,a.y);X.lineTo(mx,my);X.stroke();
+    X.strokeStyle=COL[ob];X.beginPath();X.moveTo(b.x,b.y);X.lineTo(mx,my);X.stroke();
+    X.globalAlpha=.5+.5*Math.random();X.fillStyle='#fff';X.beginPath();X.arc(mx,my,2+Math.random()*3,0,7);X.fill();
+    X.globalAlpha=.18;X.fillStyle=COL[oa];X.beginPath();X.arc(mx,my,10+Math.random()*6,0,7);X.fill()}
+  X.globalAlpha=1}
 function update(rdt){
   const dt=rdt*TS();elR+=rdt;el+=dt;
   if(cur.obj==='core'){const c=planets.find(p=>p.k==='core');cur.coreT=c&&c.o===1?(cur.coreT||0)+dt:0}
@@ -1064,13 +1111,15 @@ function update(rdt){
     const per=Math.floor(n/m);
     if(per>=1)for(const d of r.ds)send(s,d,per);
     else for(let j=0;j<n;j++){send(s,r.ds[r.i%m],1);r.i++}}
+  clashStep(dt);
   for(let i=fleets.length-1;i>=0;i--){const f=fleets[i];let q=fpos(f);
-    f.p+=f.v*(inNeb(q.x,q.y)?.45:1)*dt/Math.max(1,dist(f.a,f.b));q=fpos(f);
+    if(!f.fight)f.p+=f.v*(inNeb(q.x,q.y)?.45:1)*dt/Math.max(1,dist(f.a,f.b));q=fpos(f);
     const attr=f.loss&&f.p>f.thr?Math.floor(f.n0*f.loss*Math.min(1,(f.p-f.thr)/(1-f.thr||1))):0;
     if(world.hole){const hd=Math.hypot(q.x-world.hole.x*W,q.y-world.hole.y*H);
       if(hd<holeInfl())f.drain=(f.drain||0)+dt*(.22*(1-hd/holeInfl())+(hd<holeCore()*1.6?1.5:0))*f.n0}
-    f.n=Math.max(f.drain?0:1,f.n0-attr-Math.floor(f.drain||0));
-    if(f.n<=0){burst(q.x,q.y,'#c08bff',20);if(f.o===1)say('Uma frota foi engolida pelo buraco negro!');fleets.splice(i,1);continue}
+    f.n=Math.max(f.drain||f.cb?0:1,f.n0-attr-Math.floor(f.drain||0)-Math.floor(f.cb||0));
+    if(f.n<=0){const byHole=(f.drain||0)>=(f.cb||0);burst(q.x,q.y,byHole?'#c08bff':COL[f.o],byHole?20:16);
+      if(f.o===1&&byHole)say('Uma frota foi engolida pelo buraco negro!');fleets.splice(i,1);continue}
     if(f.p>=1){arrive(f);fleets.splice(i,1)}}
   if(!cur.aiOff)for(let o=2;o<=cur.e+1;o++){aiT[o]-=dt;if(aiT[o]<=0){aiT[o]=D().int*(.7+Math.random()*.6)*(bossIs('fast')&&o===2?.5:1);ai(o)}
     if(!cur.fix&&planets.some(p=>p.o===o)&&(mind[o].t-=dt)<=0){mind[o].t=D().think*(.8+Math.random()*.4);think(o)}}
@@ -1169,7 +1218,7 @@ function crown(x,y,s){X.fillStyle='#ffc940';X.shadowColor='#ffc940';X.shadowBlur
 
 /* naves em órbita: a quantidade mostra se a guarnição é pequena, média ou grande */
 const orbitN=t=>t<1?0:t<8?2:t<20?4:t<40?6:t<70?9:t<110?12:16;
-function mini(x,y,a,c,s,al,st){const co=Math.cos(a)*DPR,si=Math.sin(a)*DPR;X.setTransform(co,si,-si,co,x*DPR,y*DPR);X.globalAlpha=al;
+function mini(x,y,a,c,s,al,st){const z=cam.z,co=Math.cos(a)*DPR*z,si=Math.sin(a)*DPR*z;X.setTransform(co,si,-si,co,(x*z+cam.ox)*DPR,(y*z+cam.oy)*DPR);X.globalAlpha=al;
   X.fillStyle='#ffb35a';X.fillRect(-s*1.15,-s*.16,s*.55,s*.32);
   if(st&&st!=='std'){hull(X,st,s*.95,c);return}
   X.fillStyle=c;X.beginPath();X.moveTo(s,0);X.lineTo(-s*.75,s*.62);X.lineTo(-s*.4,0);X.lineTo(-s*.75,-s*.62);X.closePath();X.fill();
@@ -1181,7 +1230,7 @@ function orbit(p,t,front){
     if((sn>=0)!==front)continue;
     const ox=Math.cos(a)*ro,oy=sn*ro*.42,dx=-sn*p.dir,dy=Math.cos(a)*.42*p.dir;
     mini(x+ox*ct-oy*st,y+ox*st+oy*ct,Math.atan2(dx*st+dy*ct,dx*ct-dy*st),c,front?s:s*.85,(front?1:.5)*(p.o?1:.6),styleOf(p.o))}
-  X.setTransform(DPR,0,0,DPR,0,0);X.globalAlpha=1;
+  camT();X.globalAlpha=1;
 }
 let fogVis=null;
 function planetDraw(p,hi,t){
@@ -1213,11 +1262,26 @@ function planetDraw(p,hi,t){
     X.fillStyle='rgba(127,227,255,.09)';X.fill();X.lineWidth=1.2;for(let i=0;i<6;i++){const a=t*.8+i*1.047;X.beginPath();X.arc(x,y,r+16,a,a+.35);X.stroke()}}
   if(cur&&cur.boss&&p===planets[1]&&p.o===2)crown(x,y-r-15,Math.max(7,r*.32));
   if(hi){X.strokeStyle='#fff';X.lineWidth=2.5;X.beginPath();X.arc(x,y,r+17,0,7);X.stroke()}
+  const lv=p.lv||0,lm=lvMax(p);
+  if(lv>0&&!hid){X.strokeStyle=c;X.lineWidth=1.6;for(let i=0;i<lv;i++){const rr=r+4+i*3.5,a0=t*(.5+i*.2)*(i%2?-1:1);X.globalAlpha=.75-i*.15;
+    for(let k=0;k<3;k++){X.beginPath();X.arc(x,y,rr,a0+k*2.094,a0+k*2.094+1.3);X.stroke()}}X.globalAlpha=1}
   const fs=Math.max(12,r*.55)|0;X.font=`700 ${fs}px "Chakra Petch",sans-serif`;X.textAlign='center';X.textBaseline='middle';
   const txt=hid?'?':Math.floor(p.t),w=X.measureText(txt).width+10;
   X.fillStyle='rgba(4,7,16,.55)';X.beginPath();X.roundRect?X.roundRect(x-w/2,y-fs*.65,w,fs*1.3,fs*.65):X.rect(x-w/2,y-fs*.65,w,fs*1.3);X.fill();
   X.fillStyle='#fff';X.fillText(txt,x,y+1);
+  if(lm&&!hid&&(lv>0||p.o===1)){const sz=3.2,gap=9,y0=y+fs*.65+6,x0=x-(lm-1)*gap/2;
+    for(let i=0;i<lm;i++){const cx=x0+i*gap;X.beginPath();X.moveTo(cx,y0-sz);X.lineTo(cx+sz,y0);X.lineTo(cx,y0+sz);X.lineTo(cx-sz,y0);X.closePath();
+      if(i<lv){X.fillStyle='#ffc940';X.fill()}else{X.strokeStyle='rgba(255,255,255,.5)';X.lineWidth=1;X.stroke()}}}
+  if(p.o===1&&!hid&&running&&canUp(p)){const bx=x+r*.78,by=y-r*.78,pu=.6+.4*Math.sin(t*4);
+    X.fillStyle=`rgba(255,201,64,${pu})`;X.beginPath();X.moveTo(bx,by-6);X.lineTo(bx+5.5,by+4);X.lineTo(bx-5.5,by+4);X.closePath();X.fill()}
 }
+/* dica sob o planeta selecionado: tocar de novo evolui */
+function upLabel(p){const lm=lvMax(p);if(!lm)return;const lv=p.lv||0;let x=px(p);const y=py(p)+rad(p)+30;
+  const txt=lv>=lm?'Nível máximo':`Toque de novo: evoluir ▲ ${upCost(p)}`,ok=lv<lm&&canUp(p);
+  X.font='700 11px "Chakra Petch",sans-serif';X.textAlign='center';X.textBaseline='middle';const w=X.measureText(txt).width+16;
+  x=Math.max((6-cam.ox)/cam.z+w/2,Math.min((VW-6-cam.ox)/cam.z-w/2,x));
+  X.fillStyle='rgba(5,8,18,.85)';X.beginPath();X.roundRect?X.roundRect(x-w/2,y-10,w,20,10):X.rect(x-w/2,y-10,w,20);X.fill();
+  X.strokeStyle=ok?'#ffc940':'rgba(255,255,255,.25)';X.lineWidth=1;X.stroke();X.fillStyle=ok?'#ffc940':'rgba(232,238,252,.7)';X.fillText(txt,x,y+1)}
 function flame(g,s){const fl=s*(.9+Math.random()*.7);
   const fg=g.createLinearGradient(-s*.5,0,-s*.5-fl,0);fg.addColorStop(0,'rgba(255,240,200,.95)');fg.addColorStop(1,'rgba(255,120,40,0)');
   g.fillStyle=fg;g.beginPath();g.moveTo(-s*.45,-s*.22);g.lineTo(-s*.5-fl,0);g.lineTo(-s*.45,s*.22);g.fill()}
@@ -1241,10 +1305,13 @@ function fleetDraw(f,t){
 function arrowTo(ax,ay,bx,by,r){const a=Math.atan2(by-ay,bx-ax),ex=bx-Math.cos(a)*(r+10),ey=by-Math.sin(a)*(r+10);
   X.beginPath();X.moveTo(ex,ey);X.lineTo(ex-Math.cos(a-.5)*11,ey-Math.sin(a-.5)*11);X.lineTo(ex-Math.cos(a+.5)*11,ey-Math.sin(a+.5)*11);X.closePath();X.fill()}
 function draw(t){
-  if(bg)X.drawImage(bg,0,0,W,H);else{X.fillStyle='#070b18';X.fillRect(0,0,W,H)}
+  scrT();
+  if(bg)X.drawImage(bg,0,0,VW,VH);else{X.fillStyle='#070b18';X.fillRect(0,0,VW,VH)}
+  X.fillStyle='#fff';for(const s of tw){X.globalAlpha=.25+.75*Math.abs(Math.sin(t*.8+s.ph));X.fillRect(s.x,s.y,s.s,s.s)}X.globalAlpha=1;
+  camT();
+  if(mapK>1){X.strokeStyle='rgba(62,198,255,.12)';X.lineWidth=2/cam.z;X.setLineDash([6/cam.z,10/cam.z]);X.strokeRect(0,0,W,H);X.setLineDash([])}
   if(beltC)X.drawImage(beltC,0,0,W,H);
   drawWorldBack(t);
-  X.fillStyle='#fff';for(const s of tw){X.globalAlpha=.25+.75*Math.abs(Math.sin(t*.8+s.ph));X.fillRect(s.x,s.y,s.s,s.s)}X.globalAlpha=1;
   X.lineWidth=3;X.setLineDash([10,9]);X.lineDashOffset=-t*30;X.strokeStyle='rgba(62,198,255,.55)';X.fillStyle='rgba(62,198,255,.8)';
   for(const[s,r]of routes)for(const d of r.ds){X.beginPath();X.moveTo(px(s),py(s));X.lineTo(px(d),py(d));X.stroke()}
   X.setLineDash([]);for(const[s,r]of routes)for(const d of r.ds)arrowTo(px(s),py(s),px(d),py(d),rad(d)+8);
@@ -1273,18 +1340,20 @@ function draw(t){
   fogVis=running&&hasMod('fog')?new Set(planets.filter(p=>p.o===1||planets.some(q=>q.o===1&&dist(q,p)<=reach(q)))):null;
   for(const p of planets)planetDraw(p,sel.includes(p)||p===tapSel||p===tgt,gT);
   for(const f of fleets)fleetDraw(f,t);
+  drawClashes(t);
+  if(tapSel&&tapSel.o===1&&running)upLabel(tapSel);
   tutDraw(t);
-  drawWorldFront(t);
+  drawComets(t);
   fxDraw(t);
+  scrT();
+  drawOverlay(t);
   X.font='700 13px "Chakra Petch",sans-serif';X.textAlign='center';X.textBaseline='middle';
-  toasts.slice(-3).forEach((m,i)=>{const w=Math.min(W-20,X.measureText(m.txt).width+24),y=20+i*30;
+  toasts.slice(-3).forEach((m,i)=>{const w=Math.min(VW-20,X.measureText(m.txt).width+24),y=20+i*30;
     X.globalAlpha=Math.min(1,m.t);X.fillStyle='rgba(5,8,18,.85)';X.beginPath();
-    X.roundRect?X.roundRect(W/2-w/2,y-12,w,24,12):X.rect(W/2-w/2,y-12,w,24);X.fill();
-    X.fillStyle=COL[m.o];X.fillText(m.txt,W/2,y+1);X.globalAlpha=1});
-  if(hint&&running){X.font='700 15px "Chakra Petch",sans-serif';X.textAlign='center';X.fillStyle='rgba(232,238,252,.9)';
-    X.fillText('Arraste do planeta azul até um cinza',W/2,H-BOT/2-8)}
+    X.roundRect?X.roundRect(VW/2-w/2,y-12,w,24,12):X.rect(VW/2-w/2,y-12,w,24);X.fill();
+    X.fillStyle=COL[m.o];X.fillText(m.txt,VW/2,y+1);X.globalAlpha=1});
 }
-function hud(){
+function hud(){fitUI();
   const tot=[0,0,0,0,0,0];for(const p of planets)if(p.o)tot[p.o]+=p.t;for(const f of fleets)tot[f.o]+=f.n;
   const sum=tot.reduce((a,b)=>a+b,0)||1;
   $('bar').innerHTML=tot.map((v,o)=>o&&v?`<i style="width:${v/sum*100}%;background:${COL[o]}"></i>`:'').join('');
@@ -1322,11 +1391,27 @@ function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;
   if(running&&!paused)update(dt);if(!paused)gT+=dt*TS();draw(t/1000);tutTick();musicTick();
   if((hudT-=dt)<=0){hudT=.25;hud()}requestAnimationFrame(loop)}
 
+/* câmera: pinça para zoom, um dedo no vazio para mover o mapa */
+const ZMAX=2.2,zMin=()=>Math.min(1,VW/W,VH/H);
+function clampCam(){const z=cam.z,ww=W*z,hh=H*z,m=40;
+  cam.ox=ww<=VW?(VW-ww)/2:Math.min(m,Math.max(VW-ww-m,cam.ox));
+  cam.oy=hh<=VH?(VH-hh)/2:Math.min(m,Math.max(VH-hh-m,cam.oy))}
+function zoomAt(z,sx,sy){const wx=(sx-cam.ox)/cam.z,wy=(sy-cam.oy)/cam.z;cam.z=Math.max(zMin(),Math.min(ZMAX,z));cam.ox=sx-wx*cam.z;cam.oy=sy-wy*cam.z;clampCam();fitUI()}
+function camFit(){cam.z=zMin();clampCam();fitUI()}
+function camHome(z){const h=planets.find(p=>p.o===1)||planets[0];cam.z=Math.max(zMin(),Math.min(ZMAX,z));
+  cam.ox=VW/2-(h?px(h):W/2)*cam.z;cam.oy=VH/2-(h?py(h):H/2)*cam.z;clampCam();fitUI()}
+function toggleFit(){if(cam.z>zMin()+.02)camFit();else camHome(1)}
+function camInit(){if(mapK>1)camHome(Math.max(zMin(),.85));else camFit()}
+function fitUI(){const b=$('bFit');if(b)b.hidden=!(running&&(mapK>1||cam.z>1.02))}
+const toScr=(x,y)=>({x:x*cam.z+cam.ox,y:y*cam.z+cam.oy});
+
 /* entrada */
 let sel=[],ptr=null,down=null,tapSel=null,moved=false;
+const ptrs=new Map();let gest=null,pan=null,gestLock=false,lastTap=0;
 function at(x,y){let b=null,bd=1e9;for(const p of planets){const d=Math.hypot(px(p)-x,py(p)-y);
-  if(d<Math.max(rad(p)+14,30)&&d<bd){bd=d;b=p}}return b}
-function pos(e){const r=C.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+  if(d<Math.max(rad(p)+14/cam.z,30/cam.z)&&d<bd){bd=d;b=p}}return b}
+function spos(e){const r=C.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
+function pos(e){const q=spos(e);return{x:(q.x-cam.ox)/cam.z,y:(q.y-cam.oy)/cam.z}}
 function say(txt){if(!toasts.some(m=>m.txt===txt))toasts.push({o:1,t:2.5,txt})}
 function act(s,d){if(s===d)return;
   if(stormOn())return say('Tempestade solar — envios bloqueados por alguns segundos');
@@ -1337,21 +1422,42 @@ function act(s,d){if(s===d)return;
   const j=r.ds.indexOf(d);if(j>=0)r.ds.splice(j,1);else r.ds.push(d);
   if(!r.ds.length)routes.delete(s);hint=false;sfx('route');buzz('tap');
   toasts.push({o:1,t:2.5,txt:r.ds.length?(r.ds.length>1?`Rota dividindo entre ${r.ds.length} planetas`:'Rota contínua criada'):'Rota removida'})}
-C.addEventListener('pointerdown',e=>{if(!running||paused)return;C.setPointerCapture(e.pointerId);
+C.addEventListener('pointerdown',e=>{if(!running||paused)return;try{C.setPointerCapture(e.pointerId)}catch(_){}
+  if(e.isPrimary||e.pointerType==='mouse'){ptrs.clear();gest=null;gestLock=false}
+  ptrs.set(e.pointerId,spos(e));
+  if(ptrs.size>=2){const[a,b]=[...ptrs.values()];
+    gest={d0:Math.hypot(a.x-b.x,a.y-b.y)||1,z0:cam.z,wx:((a.x+b.x)/2-cam.ox)/cam.z,wy:((a.y+b.y)/2-cam.oy)/cam.z};
+    sel=[];ptr=null;pan=null;gestLock=true;tutF.zoom=1;return}
+  gestLock=false;
   const q=pos(e),p=at(q.x,q.y);down=q;moved=false;
   if(targeting){useAbil(targeting,p);swallow=true;sel=[];ptr=null;return}
-  if(p&&p.o===1){sel=[p];ptr=q;tutF.sel=1}else{sel=[];ptr=null}});
-C.addEventListener('pointermove',e=>{if(!sel.length)return;const q=pos(e);ptr=q;
-  if(Math.hypot(q.x-down.x,q.y-down.y)>10)moved=true;
+  if(p&&p.o===1){sel=[p];ptr=q;tutF.sel=1;pan=null}else{sel=[];ptr=null;const sp=spos(e);pan={sx:sp.x,sy:sp.y,ox:cam.ox,oy:cam.oy,moved:false}}});
+C.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;const sp=spos(e);ptrs.set(e.pointerId,sp);
+  if(gest){if(ptrs.size<2)return;const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y),mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+    cam.z=Math.max(zMin(),Math.min(ZMAX,gest.z0*d/gest.d0));cam.ox=mx-gest.wx*cam.z;cam.oy=my-gest.wy*cam.z;clampCam();fitUI();return}
+  if(gestLock)return;
+  if(pan){const dx=sp.x-pan.sx,dy=sp.y-pan.sy;if(!pan.moved&&Math.hypot(dx,dy)>9)pan.moved=true;
+    if(pan.moved){cam.ox=pan.ox+dx;cam.oy=pan.oy+dy;clampCam();if(Math.hypot(dx,dy)>30)tutF.pan=1}return}
+  if(!sel.length)return;const q=pos(e);ptr=q;
+  if(Math.hypot(q.x-down.x,q.y-down.y)*cam.z>10)moved=true;
   const p=at(q.x,q.y);if(p&&p.o===1&&!sel.includes(p)&&moved)sel.push(p)});
-C.addEventListener('pointerup',e=>{if(swallow){swallow=false;return}if(!running||paused)return;const q=pos(e),p=at(q.x,q.y);
+C.addEventListener('pointerup',e=>{ptrs.delete(e.pointerId);
+  if(gest){if(ptrs.size<2)gest=null;return}
+  if(gestLock){if(!ptrs.size)gestLock=false;return}
+  if(swallow){swallow=false;return}if(!running||paused)return;
+  if(pan){const pm=pan.moved;pan=null;if(pm)return}
+  const q=pos(e),p=at(q.x,q.y);
   if(!moved){
+    if(!p&&!tapSel){const n=performance.now();if(n-lastTap<320){toggleFit();lastTap=0}else lastTap=n}
     if(tapSel&&p&&p!==tapSel){act(tapSel,p);tapSel=null}
+    else if(p&&p.o===1&&p===tapSel){if((p.lv||0)<lvMax(p)){if(upgrade(p))tapSel=null}else tapSel=null}
     else if(p&&p.o===1&&routes.has(p)&&!tapSel)routes.delete(p);
-    else if(p&&p.o===1)tapSel=tapSel===p?null:p;else tapSel=null;
+    else if(p&&p.o===1)tapSel=p;else tapSel=null;
   }else if(p){if(sel.filter(s=>s!==p).length>=2)tutF.multi=1;for(const s of sel)act(s,p);tapSel=null}
   sel=[];ptr=null});
-C.addEventListener('pointercancel',()=>{sel=[];ptr=null});
+C.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)gest=null;if(!ptrs.size)gestLock=false;pan=null;sel=[];ptr=null});
+C.addEventListener('wheel',e=>{if(!running)return;e.preventDefault();const q=spos(e);zoomAt(cam.z*Math.exp(-e.deltaY*.0015),q.x,q.y)},{passive:false});
+$('bFit').onclick=e=>{e.stopPropagation();toggleFit();sfx('tap')};
 
 /* telas */
 const VIEWS=['vHome','vLevels','vBrief','vSk','vRes','vEnd','vPause','vDaily','vSurv','vCol','vRec','vSet'];
@@ -1393,6 +1499,7 @@ function brief(i){curIdx=i;const L=LV[i];
   if(L.obj==='core')h+=`<div>${ICON.core}${TYD.core}</div>`;
   for(const m of L.mods)if(MODS[m])h+=`<div><span class="dot" style="background:#ffc940"></span>${MODS[m]}</div>`;
   if(L.ally)h+=`<div><span class="dot" style="background:#ff5470"></span>Aliança: os inimigos não se atacam — todos vêm atrás de você.</div>`;
+  if((L.mapK||1)>1)h+=`<div><span class="dot" style="background:#3ec6ff"></span>Mapa grande (${Math.round((L.mapK)*100)}%): faça pinça para zoom e arraste no espaço vazio para mover a câmera.</div>`;
   if(L.ex)h+=`<div><span class="dot" style="background:#b07cff"></span>Cada inimigo já começa com ${L.ex} planetas extras.</div>`;
   if(L.dv>=.6)h+=`<div><span class="dot" style="background:#ff5470"></span>Inimigos de elite: coordenam ataques com vários planetas e podem usar um escudo de emergência de tempos em tempos.</div>`;
   if(L.belts&&L.belts.length)h+=`<div><svg width="30" height="30" viewBox="0 0 30 30"><g fill="#8b7d6d"><path d="M5 12l4-3 4 2 1 4-4 3-4-2z"/><path d="M16 17l3-2 4 1 1 3-3 3-4-1z"/><path d="M19 6l3-1 2 2-1 3-3 0z"/></g></svg>Cinturão de asteroides — bloqueia envios que cruzem por ele. Contorne pelas passagens.</div>`;
@@ -1400,7 +1507,10 @@ function brief(i){curIdx=i;const L=LV[i];
   $('bStart').textContent=L.tut!=null&&!save.tut[L.tut]?'Começar treinamento':'Começar';
   $('bInfo').innerHTML=h;show('vBrief')}
 $('bBack').onclick=levels;
-function start(L){if(tut)tutEnd(false);L.kind=L.kind||(curIdx>=0?'camp':'sk');L.lost=false;L.free=false;L.coreT=0;L.aiOff=false;cur=L;matchCoins=0;abilCd={};targeting=null;gen(L);if(L.obj==='hold')L.goal=Math.min(L.goal,planets.length-1);running=true;paused=false;hint=false;show(null);
+function start(L){if(tut)tutEnd(false);
+  if((L.mapK||1)>1&&!L._sc){const k=L.mapK,a=k*k*.8;L._sc=1;L.pl=Math.round(L.pl*a);
+    if(L.ty){const t={};for(const[x,n]of Object.entries(L.ty))t[x]=Math.round(n*k);L.ty=t}
+    if(L.obj==='hold')L.goal=Math.round(L.goal*a)}L.kind=L.kind||(curIdx>=0?'camp':'sk');L.lost=false;L.free=false;L.coreT=0;L.aiOff=false;cur=L;matchCoins=0;abilCd={};targeting=null;gen(L);if(L.obj==='hold')L.goal=Math.min(L.goal,planets.length-1);running=true;clashes.length=0;camInit();paused=false;hint=false;show(null);
   if(L.tut!=null&&!save.tut[L.tut]){if(L.tut===2){L.tutFree=true;L.freeUsed={}}tutStart(L.tut)}
   AU.mood=L.boss?'dark':'calm';if(L.boss)setTimeout(()=>sfx('boss'),400);hud()}
 $('bStart').onclick=()=>start(Object.assign({seed:1000+curIdx*7919},LV[curIdx]));
@@ -1408,12 +1518,12 @@ $('bStart').onclick=()=>start(Object.assign({seed:1000+curIdx*7919},LV[curIdx]))
 function opts(id,key){const box=$(id);
   const paint=()=>box.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===save[key]));
   box.onclick=e=>{const b=e.target.closest('button');if(b){save[key]=+b.dataset.v;store();paint()}};paint()}
-opts('optE','e');opts('optD','d');opts('optX','skx');
+if(save.msz==null)save.msz=0;opts('optE','e');opts('optD','d');opts('optX','skx');opts('optM','msz');
 document.querySelectorAll('.optT').forEach(box=>{const paint=()=>document.querySelectorAll('.optT button').forEach(b=>b.classList.toggle('on',+b.dataset.v===(save.ts||.45)));
   box.onclick=e=>{const b=e.target.closest('button');if(b){save.ts=+b.dataset.v;store();paint();if(cur){hud();$('pObj')&&running&&($('pObj').textContent=objText())}}};paint()});
-$('skGo').onclick=()=>{curIdx=-1;const e=save.e,n=12+e*2+Math.min(4,Math.floor(W*H/120000));
+$('skGo').onclick=()=>{curIdx=-1;const e=save.e,n=12+e*2+Math.min(4,Math.floor(VW*VH/120000));
   const mods=[];if(save.skx){if(Math.random()<.7)mods.push(LIVE[Math.random()*4|0]);if(Math.random()<.6)mods.push(EVT[Math.random()*3|0])}
-  start({n:'Escaramuça',e,ai:save.d,dv:[.05,.4,.7,1][save.d],belts:mods.includes('orbit')?[]:BELTS[['','A','B','C','D','E','F'][Math.random()*7|0]]||[],pl:n,neu:1,obj:'all',par:240,ty:{fab:2,forte:2,rele:2},
+  start({n:'Escaramuça',mapK:[1,1.4,1.8][save.msz||0],e,ai:save.d,dv:[.05,.4,.7,1][save.d],belts:mods.includes('orbit')?[]:BELTS[['','A','B','C','D','E','F'][Math.random()*7|0]]||[],pl:n,neu:1,obj:'all',par:240,ty:{fab:2,forte:2,rele:2},
     mods,pers:['agg','exp','def'].sort(()=>Math.random()-.5),seed:Math.random()*1e9|0})};
 
 function research(){$('rPts').textContent=money(save.coins);
@@ -1470,6 +1580,8 @@ function noise(o){const c=AU.ctx;if(!c)return;const t0=c.currentTime+Math.max(0,
   const g=c.createGain();g.gain.setValueAtTime(.0001,t0);g.gain.exponentialRampToValueAtTime(o.v||.1,t0+(o.a||.01));g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
   s.connect(f);f.connect(g);g.connect(o.out||AU.sfx);s.start(t0,Math.random());s.stop(t0+dur+.05)}
 const SFX={
+  upgrade:()=>{[392,523,659,880].forEach((f,i)=>tone({f,t:.22,v:.06,w:'square',d:i*.07,rev:1}));tone({f:1320,t:.4,v:.04,w:'triangle',d:.3,rev:1})},
+  clash:()=>{noise({f:2400+Math.random()*1800,t:.06,v:.05,ft:'bandpass',q:4});tone({f:1800+Math.random()*900,f2:600,t:.05,v:.02,w:'sawtooth'})},
   click:()=>tone({f:1400,f2:900,t:.05,v:.04,w:'triangle'}),
   send:()=>{noise({f:700,f2:2600,t:.28,v:.09,q:.8});tone({f:320,f2:620,t:.12,v:.035,w:'triangle'})},
   route:()=>{tone({f:520,t:.12,v:.05,w:'triangle'});tone({f:780,t:.18,v:.05,w:'triangle',d:.08})},
@@ -1561,6 +1673,8 @@ const TUT=[
   {t:'Fábrica',x:'O anel tracejado girando marca uma fábrica: ela produz quase o dobro de tropas. Vale conquistar cedo.',tgt:()=>planets.filter(p=>p.k==='fab').slice(0,1)},
   {t:'Fortaleza',x:'O hexágono marca uma fortaleza: ela recebe só 60% do dano. Ótima para defender, difícil de tomar.',tgt:()=>planets.filter(p=>p.k==='forte').slice(0,1)},
   {t:'Relé',x:'O anel inclinado marca um relé: naves que saem dele voam 70% mais rápido, alcançam mais longe e não perdem tropas na viagem.',tgt:()=>planets.filter(p=>p.k==='rele').slice(0,1)},
+  {t:'Evoluir planetas',x:'Toque no seu planeta para selecionar e toque nele de novo para evoluir. Evoluir gasta tropas e aumenta a produção (+40%) e a capacidade (+35%) por nível. Pequenos evoluem 1 vez, médios 2 e grandes 3. Os losangos mostram o nível, e o triângulo dourado aparece quando já dá para evoluir. Se o planeta for tomado, perde um nível.',do:1,src:homeP,
+    start:()=>{const h=homeP();if(h&&h.t<upCost(h)+3)h.t=upCost(h)+3},done:()=>tutF.up},
   {t:'Modo contínuo',x:'No modo Contínuo, cada arraste cria uma rota que fica mandando tropas sozinha. Toque em "Contínuo" e depois arraste do seu planeta até o planeta destacado.',do:1,hi:'[data-m="1"]',src:homeP,tgt:()=>nearN(1),done:()=>routes.size>0},
   {t:'Dividir uma rota',x:'Arraste do mesmo planeta até um segundo alvo. As tropas passam a ser divididas igualmente entre os dois.',do:1,src:homeP,tgt:()=>{const r=routes.get(homeP());return nearN(3).filter(p=>!r||!r.ds.includes(p)).slice(0,1)},done:()=>[...routes.values()].some(r=>r.ds.length>=2)},
   {t:'Controlar as rotas',x:'Arrastar de novo até o mesmo alvo tira ele da rota. Tocar no planeta de origem cancela as rotas dele, e "Parar rotas" cancela todas. Volte para "Uma vez" quando quiser envios avulsos.',hi:'#bClear'},
@@ -1573,6 +1687,8 @@ const TUT=[
   {t:'Habilidades',x:'Escudo protege um planeta seu, Choque tira tropas de um alvo e Congelar trava um planeta inimigo. Elas custam moedas e têm recarga. Neste treinamento, o primeiro uso de cada uma é grátis.',hi:'#abil'},
   {t:'Use o Choque',x:'Toque em "Choque" e depois no planeta vermelho.',do:1,hi:'#ab-shock',tgt:enemyP,done:()=>tutF.shock},
   {t:'Ataque combinado',x:'Arraste passando por pelo menos 2 planetas seus antes de soltar num alvo: todos atacam juntos.',do:1,done:()=>tutF.multi},
+  {t:'Combate no caminho',x:'Quando frotas inimigas se cruzam no espaço, elas param e trocam tiros até uma ser destruída. A maior vence e segue com o que sobrou. Use isso para interceptar ataques antes que cheguem aos seus planetas.'},
+  {t:'Câmera',x:'Faça pinça com dois dedos para aproximar ou afastar e arraste um dedo no espaço vazio para mover o mapa. Toque duas vezes no vazio, ou no botão ⤢, para alternar entre ver tudo e aproximar. As missões avançadas têm mapas maiores, com mais planetas.'},
   {t:'Pausa e velocidade',x:'O botão de pausa abre o menu com a velocidade do jogo (Lenta, Média ou Rápida) e a opção de reiniciar. Som, música e vibração ficam em Ajustes, no menu principal.',hi:'#bPause'},
   {t:'Pronto, comandante!',x:'Você já sabe o essencial. Elimine o inimigo para concluir o treinamento. Depois disso, a campanha é toda sua.',ai:1}]];
 function tutStart(i){tut={i,steps:TUT[i],k:-1};tutF={};cur.aiOff=true;hint=false;tutNext()}
@@ -1646,6 +1762,8 @@ const ACH=[
  {id:'win50',n:'Lenda viva',d:'Vença 50 partidas.',r:500,p:()=>[SS().wins,50]},
  {id:'cap50',n:'Conquistador',d:'Conquiste 50 planetas.',r:100,p:()=>[SS().caps,50]},
  {id:'cap300',n:'Devorador de mundos',d:'Conquiste 300 planetas.',r:300,p:()=>[SS().caps,300]},
+ {id:'up25',n:'Evolução',d:'Evolua planetas 25 vezes.',r:150,p:()=>[SS().ups||0,25]},
+ {id:'clash',n:'Duelo no vácuo',d:'Destrua 300 naves inimigas em combate no caminho.',r:200,p:()=>[Math.floor(SS().clash||0),300]},
  {id:'perfect',n:'Intocável',d:'Vença sem perder nenhum planeta.',r:150,p:()=>[SS().perfect,1]},
  {id:'stars15',n:'Estrelado',d:'Tenha 3 estrelas em 15 missões.',r:200,p:()=>[save.stars.filter(x=>x===3).length,15]},
  {id:'sec1',n:'Setor conquistado',d:'Feche o Setor Inicial derrotando o primeiro chefe.',r:100,p:()=>[Math.min(save.unl,15),15]},
@@ -1722,7 +1840,7 @@ function dailyCfg(key){let a=hashStr(key);const rn=()=>{a=a+0x6D2B79F5|0;let t=M
   if(rn()<.6)mods.push(pick(['fog','scarce','rich','giants','swarm','rebels']));
   const bk=mods.includes('orbit')?'':pick(['','A','C','E','F','G','H']);
   let pl=15+(rn()*5|0);if(mods.includes('swarm'))pl+=6;if(mods.includes('giants'))pl-=5;
-  return{kind:'daily',key,n:'Desafio de '+key.split('-').reverse().join('/'),e,dv:+(.5+rn()*.3).toFixed(2),pl,neu:1.1,obj:'all',par:300,
+  return{kind:'daily',mapK:1.35,key,n:'Desafio de '+key.split('-').reverse().join('/'),e,dv:+(.5+rn()*.3).toFixed(2),pl,neu:1.1,obj:'all',par:300,
     ty:{fab:1+(rn()*3|0),forte:rn()*3|0,rele:1+(rn()*2|0)},mods,belts:BELTS[bk]||[],
     pers:Array.from({length:e},()=>pick(['agg','exp','def','opo','bal'])),seed:hashStr(key+'m'),homeSeed:hashStr(key+'h')}}
 function dailyScreen(){const k=dayKey(),L=dailyCfg(k),pb=save.daily.best[k];
@@ -1741,7 +1859,7 @@ function survScreen(){$('sInfo').innerHTML=`<div><b>Recorde: ${save.surv.wave?`o
   <div><span class="dot" style="background:#ffc940"></span>Cada onda resistida rende moedas; elas são somadas no fim.</div>
   <div><span class="dot" style="background:#3ec6ff"></span>Piratas saqueiam: o planeta tomado vira neutro, e você pode reconquistá-lo.</div>
   <div><span class="dot" style="background:#9be15d"></span>Cada partida sorteia um mapa vivo diferente.</div>`;show('vSurv')}
-function startSurv(){curIdx=-3;start({kind:'surv',n:'Sobrevivência',e:0,dv:.5,pl:15,neu:1,obj:'surv',ty:{fab:2,forte:3,rele:1},
+function startSurv(){curIdx=-3;start({kind:'surv',mapK:1.3,n:'Sobrevivência',e:0,dv:.5,pl:15,neu:1,obj:'surv',ty:{fab:2,forte:3,rele:1},
   mods:[LIVE[Math.random()*LIVE.length|0],...(Math.random()<.5?['rebels']:[])],belts:[],seed:Math.random()*1e9|0})}
 
 /* ===== recordes ===== */
